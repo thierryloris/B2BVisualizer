@@ -3,7 +3,15 @@
     <!-- Classement des sociétés -->
     <StatCard title="Classement des Sociétés">
       <div class="rankings">
-        <div v-for="(ranking, index) in statistics.rankings" :key="index" class="ranking-item">
+        <div v-if="!hasData" class="text-text-secondary text-center p-4">
+          Upload a CSV file to see company rankings
+        </div>
+        <div
+          v-else
+          v-for="(ranking, index) in statistics.rankings"
+          :key="index"
+          class="ranking-item"
+        >
           <span class="company-name">{{ ranking.entreprise }}</span>
           <StatValue :value="ranking.montant" format="currency" />
         </div>
@@ -13,47 +21,101 @@
     <!-- Moyennes par type de client -->
     <StatCard title="Moyennes par Type de Client">
       <div class="averages">
-        <div class="average-item">
-          <div class="label">Clients Récurrents</div>
-          <div class="value-container">
-            <StatValue :value="statistics.recurringAverage" format="currency" size="large" />
-          </div>
+        <div v-if="!hasData" class="text-text-secondary text-center p-4">
+          Upload a CSV file to see averages
         </div>
-        <div class="average-item">
-          <div class="label">Clients Non Récurrents</div>
-          <div class="value-container">
-            <StatValue :value="statistics.nonRecurringAverage" format="currency" size="large" />
+        <template v-else>
+          <div class="average-item">
+            <div class="label">Clients Récurrents</div>
+            <div class="value-container">
+              <StatValue :value="statistics.recurringAverage" format="currency" size="large" />
+            </div>
           </div>
-        </div>
+          <div class="average-item">
+            <div class="label">Clients Non Récurrents</div>
+            <div class="value-container">
+              <StatValue :value="statistics.nonRecurringAverage" format="currency" size="large" />
+            </div>
+          </div>
+        </template>
       </div>
     </StatCard>
 
     <!-- Fréquence des achats -->
     <StatCard title="Fréquence Moyenne des Achats">
       <div class="frequency">
-        <StatValue :value="statistics.purchaseFrequency" size="large" />
-        <span class="unit">jours</span>
+        <div v-if="!hasData" class="text-text-secondary text-center p-4">
+          Upload a CSV file to see purchase frequency
+        </div>
+        <template v-else>
+          <StatValue :value="statistics.purchaseFrequency" size="large" />
+          <span class="unit">jours</span>
+        </template>
       </div>
     </StatCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useCSVStore } from '@/stores/csvStore'
 import StatCard from '@/components/common/StatCard.vue'
 import StatValue from '@/components/common/StatValue.vue'
 import type { CompanyStatistics } from '@/types'
-import { CompanyService } from '@/services/companyService'
 
-const statistics = ref<CompanyStatistics>({
-  rankings: [],
-  recurringAverage: 0,
-  nonRecurringAverage: 0,
-  purchaseFrequency: 0,
-})
+const csvStore = useCSVStore()
+const { csvData, hasData } = storeToRefs(csvStore)
 
-onMounted(async () => {
-  statistics.value = await CompanyService.getStatistics()
+const statistics = computed<CompanyStatistics>(() => {
+  if (!hasData.value) {
+    return {
+      rankings: [],
+      recurringAverage: 0,
+      nonRecurringAverage: 0,
+      purchaseFrequency: 0,
+    }
+  }
+
+  // Calculate rankings
+  const rankings = csvData.value
+    .map((item) => ({
+      entreprise: item.entreprise,
+      montant: parseFloat(item.montans || '0'),
+      recurrent: item.recurrent,
+    }))
+    .sort((a, b) => b.montant - a.montant)
+    .slice(0, 10)
+
+  // Calculate averages
+  const recurringClients = csvData.value.filter((item) => item.recurrent === 'Oui')
+  const nonRecurringClients = csvData.value.filter((item) => item.recurrent === 'Non')
+
+  const recurringAverage =
+    recurringClients.reduce((sum, item) => sum + parseFloat(item.montans || '0'), 0) /
+    (recurringClients.length || 1)
+
+  const nonRecurringAverage =
+    nonRecurringClients.reduce((sum, item) => sum + parseFloat(item.montans || '0'), 0) /
+    (nonRecurringClients.length || 1)
+
+  // Calculate purchase frequency
+  const dates = csvData.value.map((item) => new Date(item.derniere_commande || '').getTime())
+  const sortedDates = dates.sort((a, b) => a - b)
+  const timeDifferences = sortedDates.slice(1).map((date, i) => date - sortedDates[i])
+  const purchaseFrequency =
+    timeDifferences.length > 0
+      ? timeDifferences.reduce((sum, diff) => sum + diff, 0) /
+        timeDifferences.length /
+        (1000 * 60 * 60 * 24)
+      : 0
+
+  return {
+    rankings,
+    recurringAverage,
+    nonRecurringAverage,
+    purchaseFrequency,
+  }
 })
 </script>
 
@@ -102,8 +164,7 @@ onMounted(async () => {
 }
 
 .company-name {
-  font-weight: 500;
-  color: var(--text-color);
+  color: var(--text-primary);
 }
 
 .averages {
@@ -114,30 +175,26 @@ onMounted(async () => {
 
 .average-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .label {
-  font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
 .value-container {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  text-align: right;
 }
 
 .frequency {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  justify-content: center;
 }
 
 .unit {
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 </style>

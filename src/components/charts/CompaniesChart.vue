@@ -2,7 +2,10 @@
   <div class="card stat-card">
     <span class="stat-label">Client Retention</span>
     <div class="chart-container">
-      <Doughnut :data="chartData" :options="chartOptions" />
+      <Doughnut v-if="hasData" :data="chartData" :options="chartOptions" />
+      <div v-else class="text-text-secondary text-center p-4">
+        Upload a CSV file to see the chart
+      </div>
     </div>
   </div>
 </template>
@@ -18,10 +21,14 @@ import {
   TooltipItem,
 } from 'chart.js'
 import { Doughnut } from 'vue-chartjs'
-import { ref, onMounted } from 'vue'
-import { companiesData, parseCSV, type CompanyData } from '@/utils/csvLoader'
+import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useCSVStore } from '@/stores/csvStore'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
+
+const csvStore = useCSVStore()
+const { csvData, hasData } = storeToRefs(csvStore)
 
 const chartOptions: ChartOptions = {
   responsive: true,
@@ -47,9 +54,21 @@ const chartOptions: ChartOptions = {
   },
 }
 
-const processData = (data: CompanyData[]) => {
-  const recurring = data.filter((item) => item.recurrent === 'Oui').length
-  const nonRecurring = data.filter((item) => item.recurrent === 'Non').length
+const chartData = computed<ChartData<'doughnut'>>(() => {
+  if (!hasData.value) {
+    return {
+      labels: [],
+      datasets: [
+        {
+          backgroundColor: [],
+          data: [],
+        },
+      ],
+    }
+  }
+
+  const recurring = csvData.value.filter((item) => item.recurrent === 'Oui').length
+  const nonRecurring = csvData.value.filter((item) => item.recurrent === 'Non').length
 
   return {
     labels: ['Clients Récurrents', 'Clients Non Récurrents'],
@@ -59,25 +78,6 @@ const processData = (data: CompanyData[]) => {
         data: [recurring, nonRecurring],
       },
     ],
-  }
-}
-
-const chartData = ref<ChartData<'doughnut'>>({
-  labels: [],
-  datasets: [
-    {
-      backgroundColor: [],
-      data: [],
-    },
-  ],
-})
-
-onMounted(() => {
-  try {
-    const data = parseCSV(companiesData)
-    chartData.value = processData(data)
-  } catch (error) {
-    console.error('Error processing CSV data:', error)
   }
 })
 </script>

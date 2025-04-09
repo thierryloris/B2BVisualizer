@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import '@/assets/theme.css'
+import '@/assets/main.css'
 </script>
 
 <template>
@@ -75,12 +76,5 @@ import '@/assets/theme.css'
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1rem;
-}
-
-/* Reset default styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
 }
 </style>
