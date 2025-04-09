@@ -1,0 +1,58 @@
+:root {
+  --background-primary: #121212;
+  --background-secondary: #1e1e1e;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --accent-color: #3b82f6;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --card-background: rgba(255, 255, 255, 0.05);
+  --success-color: #41b883;
+  --danger-color: #e46651;
+  --warning-color: #f59e0b;
+}
+
+body {
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.card {
+  background-color: var(--background-secondary);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.chart-container {
+  margin: 1rem 0;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.stat-change {
+  color: var(--success-color);
+  font-size: 0.875rem;
+}
+
+.stat-change.negative {
+  color: var(--danger-color);
+}
