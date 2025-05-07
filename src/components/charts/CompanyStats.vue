@@ -63,6 +63,7 @@ import { useCSVStore } from '@/stores/csvStore'
 import StatCard from '@/components/common/StatCard.vue'
 import StatValue from '@/components/common/StatValue.vue'
 import type { CompanyStatistics } from '@/types'
+import { calculateStatistics } from '@/utils/statistics'
 
 const csvStore = useCSVStore()
 const { csvData, hasData } = storeToRefs(csvStore)
@@ -77,45 +78,7 @@ const statistics = computed<CompanyStatistics>(() => {
     }
   }
 
-  // Calculate rankings
-  const rankings = csvData.value
-    .map((item) => ({
-      entreprise: item.entreprise,
-      montant: parseFloat(item.montans || '0'),
-      recurrent: item.recurrent,
-    }))
-    .sort((a, b) => b.montant - a.montant)
-    .slice(0, 10)
-
-  // Calculate averages
-  const recurringClients = csvData.value.filter((item) => item.recurrent === 'Oui')
-  const nonRecurringClients = csvData.value.filter((item) => item.recurrent === 'Non')
-
-  const recurringAverage =
-    recurringClients.reduce((sum, item) => sum + parseFloat(item.montans || '0'), 0) /
-    (recurringClients.length || 1)
-
-  const nonRecurringAverage =
-    nonRecurringClients.reduce((sum, item) => sum + parseFloat(item.montans || '0'), 0) /
-    (nonRecurringClients.length || 1)
-
-  // Calculate purchase frequency
-  const dates = csvData.value.map((item) => new Date(item.derniere_commande || '').getTime())
-  const sortedDates = dates.sort((a, b) => a - b)
-  const timeDifferences = sortedDates.slice(1).map((date, i) => date - sortedDates[i])
-  const purchaseFrequency =
-    timeDifferences.length > 0
-      ? timeDifferences.reduce((sum, diff) => sum + diff, 0) /
-        timeDifferences.length /
-        (1000 * 60 * 60 * 24)
-      : 0
-
-  return {
-    rankings,
-    recurringAverage,
-    nonRecurringAverage,
-    purchaseFrequency,
-  }
+  return calculateStatistics(csvData.value)
 })
 </script>
 
